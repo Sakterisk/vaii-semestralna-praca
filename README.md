@@ -18,8 +18,8 @@ Make sure you have the following installed on your system:
 ### 1. Clone the Repository
 
 ```bash
-git clone <repository-url>
-cd <repository-name>
+git clone https://github.com/Sakterisk/vaii-semestralna-praca/
+cd vaii-semestralna-praca
 ```
 
 ### 2. Build and Start Containers
