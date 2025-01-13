@@ -1,191 +1,136 @@
-import { useEffect } from 'react';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 
-
-
-function SectionManager()
+function SectionManager({ back })
 {
-    const [openMenuAdd, setOpenMenuAdd] = useState(false);
-    const toggleMenuAdd = () => {
-        if (openMenuEdit)
-        {
-            setOpenMenuEdit(!openMenuEdit);
-            document.getElementById('inputEditHeader').value = '';
-            document.getElementById('inputEditContent').value = '';
-            formData.header = '';
-            formData.content = '';
-        }
-        setOpenMenuAdd(!openMenuAdd);
-    };
-    const [openMenuEdit, setOpenMenuEdit] = useState(false);
-    const toggleMenuEdit = () => {
-        if (openMenuAdd)
-        {
-            setOpenMenuAdd(!openMenuAdd);
-        }
-        if (!openMenuEdit)
-        {
-            formData.header = headers[selectedSectionIndex];
-            formData.content = contents[selectedSectionIndex];
-            document.getElementById('inputEditHeader').value = headers[selectedSectionIndex];
-            document.getElementById('inputEditContent').value = contents[selectedSectionIndex];
-        } else {
-            document.getElementById('inputEditHeader').value = '';
-            document.getElementById('inputEditContent').value = '';
-            formData.header = '';
-            formData.content = '';
-        }
-        setOpenMenuEdit(!openMenuEdit);
-    };
-
-    const [selectedSection, setSelectedSection] = useState(0);
-    const [selectedSectionIndex, setSelectedSectionIndex] = useState(-1);
-
-    const selectSection = (event) => {
-        setSelectedSection(event.target.id);
-        setSelectedSectionIndex(event.target.name);
-    }
-
-    const [headers, setHeaders] = useState([]);
-    const [ids, setIds] = useState([]);
-    const [contents, setContents] = useState([]);
-
-    const sectionsData = () => {
-        fetch('http://localhost:8000/api/sections')
-        .then(response => response.json())
-        .then(data => {
-            setHeaders(data.map(section => section.header));
-            setIds(data.map(section => section.id));
-            setContents(data.map(section => section.content));
-        });
-    }
-
-    useEffect(() => {
-        sectionsData();
-    }, []);
-
     const [formData, setFormData] = useState({
         header: '',
         content: ''
     });
-
-    const [error, setError] = useState('');
-
-    const handleChange = (event) => {
-        const value = event.target.value;
-        const pattern = /^[a-zA-Z0-9- ]+$/;
-
-        if (pattern.test(value)) {
-            setFormData({
-                ...formData,
-                [event.target.name]: value
-            });
-            setError('');
-        } else {
-            setError('Only alphanumeric characters are allowed');
+    const [sections, setSections] = useState([]);
+    const [action, setAction] = useState('sections');
+    const [editId, setEditId] = useState(null);
+    
+    const getSections = async () => {
+        try {
+            const response = await axios.get('/api/sections');
+            setSections(response.data);
+        }
+        catch (error) {
+            console.log(error);
         }
     }
 
-    
+    useEffect(() => {
+        getSections();
+    }, []);
 
-    const addSection = (event) => {
-        event.preventDefault();
-        console.log(JSON.stringify(formData));
-        fetch('http://localhost:8000/api/sections', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'accept': 'application/json'
-            },
-            body: JSON.stringify(formData)  
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('inputAddHeader').value = '';
-            document.getElementById('inputAddContent').value = '';
-            setOpenMenuAdd(false);
-            sectionsData();
-        });
-        
-    }
-    
-    const editSection = (event) => {
-        event.preventDefault();
-        fetch(`http://localhost:8000/api/sections/${selectedSection}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'accept': 'application/json'
-            },
-            body: JSON.stringify(formData)
-        })
-        .then(response => response.json())
-        .then(data => {
-            document.getElementById('inputEditHeader').value = '';
-            document.getElementById('inputEditContent').value = '';
-            setOpenMenuEdit(false);
-            sectionsData();
+
+    const handleChange = (event) => {
+        setFormData({
+            ...formData,
+            [event.target.name]: event.target.value
         });
     }
 
-    const deleteSection = (event) => {
+    
+
+    const addSection = async (event) => {
         event.preventDefault();
-        fetch(`http://localhost:8000/api/sections/${selectedSection}`, {
-            method: 'DELETE'
-        })
-        .then(response => response.json())
-        .then(data => {
-            setSelectedSection(0);
-            sectionsData();
-        });
+        try {
+            await axios.post('/api/sections', formData);
+            setFormData({ header: '', content: '' });
+            setAction('sections');
+            getSections();
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+    
+    const editSection = async (event) => {
+        event.preventDefault();
+        const confirmEdit = window.confirm("Are you sure you want to edit this section?");
+        if (!confirmEdit) return;
+        try {
+            await axios.put(`/api/sections/${editId}`, formData);
+            setFormData({ header: '', content: '' });
+            setAction('sections');
+            getSections();
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+
+    const deleteSection = async (id) => {
+        try {
+            await axios.delete(`/api/sections/${id}`);
+            setAction('sections');
+            getSections();
+        }
+        catch (error) {
+            console.log(error);
+        }
+    }
+
+    const editButton = (id) => {
+        setAction('edit');
+        setEditId(id);
+        const section = sections.find(section => section.id === id);
+        setFormData({ header: section.header, content: section.content });
+
+    }
+
+    const deleteButton = (id) => {
+        const confirmDelete = window.confirm("Are you sure you want to delete this section?");
+        if (!confirmDelete) return;
+        setAction('sections');
+        deleteSection(id);
+    }
+
+    const addButton = () => {
+        setFormData({ header: '', content: '' });
+        setAction('add');
+    }
+
+    const sectionsButton = () => {
+        setFormData({ header: '', content: '' });
+        setAction('sections');
     }
 
   return (
     <>
-        <div className="sm-buttons">
-            <button onClick={toggleMenuAdd}>Add</button>
-            <button disabled={selectedSection === 0} onClick={toggleMenuEdit}>Edit</button>
-            <button disabled={selectedSection === 0} onClick={deleteSection}>Delete</button>
+        <div className="admin-menu">
+            <button onClick={() => sectionsButton()}>Show sections</button>
+            <button onClick={() => addButton()}>Add section</button>
+            <button onClick={() => back()}>Back</button>
         </div>
-        <form className={`sm-add-form ${openMenuAdd ? 'active' : ''}`}>
+        {(action === 'add' || action === 'edit') ? 
+        <form onSubmit={action === 'add' ? addSection : editSection}>
             <div className="form-group">
-                <label htmlFor="inputHeader">Header</label>
-                <input onChange={handleChange} type="text" name='header' id="inputAddHeader" placeholder="Header..." className="form-control" />
-            </div>
-            <div className="form-group">
-                <label htmlFor="inputContent">Content</label>
-                <textarea onChange={handleChange} name='content' id="inputAddContent" rows="3" className="form-control"></textarea>
+                <label htmlFor="input-header">Header</label>
+                <input onChange={handleChange} type="text" name='header' id="input-header" placeholder="Header..." className="form-control" value={formData.header} />
             </div>
             <div className="form-group">
-            {error && <p style={{ color: 'red' }}>{error}</p>}
+                <label htmlFor="input-content">Content</label>
+                <textarea onChange={handleChange} name='content' id="input-content" rows="3" className="form-control" value={formData.content}></textarea>
             </div>
-            <div className="form-group button-container">
-                <button disabled={error} className="form-button" onClick={addSection}>Add</button>
-            </div>
+            <button type="submit">{action === 'add' ? 'Add' : 'Edit'}</button>
         </form>
-        <form className={`sm-add-form ${openMenuEdit ? 'active' : ''}`}>
-            <div className="form-group">
-                <label htmlFor="inputHeader">Header</label>
-                <input onChange={handleChange} type="text" name='header' id="inputEditHeader" placeholder="Header..." className="form-control" />
-            </div>
-            <div className="form-group">
-                <label htmlFor="inputContent">Content</label>
-                <textarea onChange={handleChange} name='content' id="inputEditContent" rows="3" className="form-control"></textarea>
-            </div>
-            <div className="form-group">
-            {error && <p style={{ color: 'red' }}>{error}</p>}
-            </div>
-            <div className="form-group button-container">
-                <button disabled={error} className="form-button" onClick={editSection}>Save</button>
-            </div>
-        </form>
+        : 
         <div className="sm-sections">
-            {headers.map((header, index) => (
-                <button id={ids[index]} name={index} onClick={selectSection} className={`sm-section ${selectedSection == ids[index] ? 'selected' : ''}`}>
-                    {index + 1}. {header}
-                </button>
+            {sections.map((section, index) => (
+                <div key={index} className="sm-section">
+                    <h1>{section.header}</h1>
+                    <div className="sm-buttons">
+                        <button onClick={() => editButton(section.id)}>Edit</button>
+                        <button onClick={() => deleteButton(section.id)}>Delete</button>
+                    </div>
+                </div>
             ))}
         </div>
+        }
 
     </>
   );

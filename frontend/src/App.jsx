@@ -4,9 +4,10 @@ import Header from './components/Navbar';
 import Footer from './components/Footer';
 import AboutMe from './components/AboutMe';
 import MyWork from './components/MyWork';
-import Contact from './components/Contact';
-import SectionManager from './components/SectionManager';
+import MessageMe from './components/MessageMe';
+import Login from './components/Login';
 import './App.css';
+import AdminPanel from './components/AdminPanel';
 
 const App = () => {
 
@@ -18,9 +19,11 @@ const App = () => {
     } else if (pageContent === 'mywork') {
       return <MyWork />;
     } else if (pageContent === 'contact') {
-      return <Contact />;
-    } else if (pageContent === 'secmanager') {
-      return <SectionManager />;
+      return <MessageMe />;
+    } else if (pageContent === 'adminpanel') {
+      return <AdminPanel />;
+    } else if (pageContent === 'login') {
+      return <Login setPageContent={setPageContent}/>;
     }
   }
 

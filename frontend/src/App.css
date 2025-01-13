@@ -44,11 +44,21 @@ header {
   align-items: left;
 }
 
+.nav-small {
+  display: none;
+  justify-content: space-between;
+  align-items: left;
+}
+
+.auth-icon {
+  display: none;
+}
+
 .navbar-toggler {
   display: none;
   background: none;
   border: none;
-  font-size: 1.5rem;
+  font-size: 1.3rem;
   cursor: pointer;
   padding: .5rem 1rem;
 }
@@ -77,18 +87,30 @@ header {
     display: flex;
   }
 
+  .nav-small {
+    display: flex;
+  }
+
   .navbar-toggler {
-    display: block;
+    display: flex;
   }
 
   .nav-button {
     display: block;
     width: 100%;
   }
+
+  .auth-text {
+    display: none;
+  }
+
+  .auth-icon {
+    display: block;
+  }
 }
 
 form {
-  padding: 2rem;
+  padding: 1rem 2rem;
   background-color: #33415C;
 }
 
@@ -116,6 +138,21 @@ form {
   border-radius: 4px;
   width: 100%;
   box-sizing: border-box;
+}
+
+form h1 {
+  text-align: center;
+  margin: 0;
+}
+
+form p {
+  text-align: center;
+}
+
+.clickable-text {
+  text-decoration: underline;
+  color: #55f;
+  cursor: pointer;
 }
 
 .accordion {
@@ -146,23 +183,21 @@ form {
   color: #55f;
 }
 
-.sm-add-form {
-  display: none;
-}
-
-.sm-add-form.active {
-  display: block;
-}
-
 .sm-sections {
+  gap: 1rem;
   padding: 2rem;
   background-color: transparent;
 }
 
 .sm-section {
+  display: flex;
+  justify-content: space-between;
+  background-color: #33415C;
+  align-items: left;
   text-align: left;
-  margin-bottom: 1rem;
   width: 100%;
+  padding-left: 1rem;
+  border-bottom: 2px solid #FFFFFF; 
 }
 
 .sm-section.selected {
