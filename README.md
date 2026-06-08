@@ -1,31 +1,25 @@
-# VAII semestralka
+# VAII — Semestral Project
 
-This project consists of a Laravel backend and a React frontend, both containerized using Docker. Follow the steps below to set up and run the project locally.
+Full-stack web application built as a semester project for the Web Applications and Internet Technologies course at FRI UNIZA. Features a **Laravel** backend with a **React** frontend, fully containerized with Docker.
 
----
+## Tech
+- **Backend:** PHP / Laravel
+- **Frontend:** React (JavaScript)
+- **Database:** MySQL (via Docker)
+- **Infrastructure:** Docker, Docker Compose
 
-## Prerequisites
-
-Make sure you have the following installed on your system:
-
-1. [Docker](https://www.docker.com/) (Ensure Docker Compose is also installed)
-2. [Git](https://git-scm.com/)
-
----
-
-## Getting Started
-
-### 1. Clone the Repository
+## How to Run
 
 ```bash
-git clone https://github.com/Sakterisk/vaii-semestralna-praca/
+git clone https://github.com/Sakterisk/vaii-semestralna-praca
 cd vaii-semestralna-praca
-```
-
-### 2. Build and Start Containers
-
-Run the following command to build and start the containers:
-
-```bash
 docker-compose up --build
 ```
+
+Frontend runs on `http://localhost:3000`, backend API on `http://localhost:8000`.
+
+## What I Learned
+- RESTful API design with Laravel
+- React component architecture and state management
+- Docker multi-container setup with docker-compose
+- Full-stack integration between separate frontend and backend services
