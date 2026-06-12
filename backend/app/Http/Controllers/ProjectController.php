@@ -2,78 +2,105 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Project;
+use App\Support\ContentSanitizer;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class ProjectController extends Controller
 {
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        $projects = Project::all();
-        return response()->json($projects);
-    }
+        $query = Project::query()->orderByDesc('is_featured')->orderBy('display_order')->orderBy('id');
 
-    public function store(Request $request)
-    {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
+        if (! $request->boolean('include_hidden')) {
+            $query->where('is_visible', true);
         }
-        $request->validate([
-            'header' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
-            'link' => ['required', 'string', 'max:255'],
+
+        if ($request->boolean('featured')) {
+            $query->where('is_featured', true);
+        }
+
+        $tag = trim((string) $request->query('tag', ''));
+        if ($tag !== '') {
+            $query->whereJsonContains('tags', $tag);
+        }
+
+        return response()->json([
+            'data' => $query->get(),
         ]);
-        $project = new Project;
-        $project->header = $request->header;
-        $project->content = $request->content;
-        $project->link = $request->link;
-        $project->save();
-        return response()->json('Project added successfully');
     }
 
-    public function show($id)
+    public function store(Request $request): JsonResponse
     {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json('Project not found');
-        }
-        return response()->json($project);
+        $validated = $this->validatePayload($request);
+
+        $project = Project::create($this->sanitizePayload($validated));
+
+        return response()->json([
+            'message' => 'Project created successfully.',
+            'data' => $project,
+        ], 201);
     }
 
-    public function update(Request $request, $id)
+    public function show(Project $project): JsonResponse
     {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json('Project not found');
-        }
-        $request->validate([
-            'header' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
-            'link' => ['required', 'string', 'max:255'],
+        return response()->json([
+            'data' => $project,
         ]);
-        $project->header = $request->header;
-        $project->content = $request->content;
-        $project->link = $request->link;
-        $project->save();
-        return response()->json('Project updated successfully');
     }
 
-    public function destroy($id)
+    public function update(Request $request, Project $project): JsonResponse
     {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $project = Project::find($id);
-        if (!$project) {
-            return response()->json('Project not found');
-        }
+        $validated = $this->validatePayload($request);
+        $project->update($this->sanitizePayload($validated));
+
+        return response()->json([
+            'message' => 'Project updated successfully.',
+            'data' => $project->fresh(),
+        ]);
+    }
+
+    public function destroy(Project $project): JsonResponse
+    {
         $project->delete();
-        return response()->json('Project deleted successfully');
+
+        return response()->json([
+            'message' => 'Project deleted successfully.',
+        ]);
+    }
+
+    private function validatePayload(Request $request): array
+    {
+        return $request->validate([
+            'header' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string', 'max:4096'],
+            'link' => ['required', 'url', 'max:255'],
+            'demo_url' => ['nullable', 'url', 'max:255'],
+            'image_url' => ['nullable', 'url', 'max:255'],
+            'tags' => ['nullable', 'array'],
+            'tags.*' => ['string', 'max:50'],
+            'is_featured' => ['nullable', 'boolean'],
+            'is_visible' => ['nullable', 'boolean'],
+            'display_order' => ['nullable', 'integer', 'min:0', 'max:10000'],
+        ]);
+    }
+
+    private function sanitizePayload(array $payload): array
+    {
+        return [
+            'header' => ContentSanitizer::text($payload['header']),
+            'content' => ContentSanitizer::html($payload['content']),
+            'link' => ContentSanitizer::url($payload['link']),
+            'demo_url' => ContentSanitizer::url($payload['demo_url'] ?? null),
+            'image_url' => ContentSanitizer::url($payload['image_url'] ?? null),
+            'tags' => array_values(array_filter(array_map(
+                static fn ($tag) => ContentSanitizer::text($tag),
+                $payload['tags'] ?? []
+            ))),
+            'is_featured' => $payload['is_featured'] ?? false,
+            'is_visible' => $payload['is_visible'] ?? true,
+            'display_order' => $payload['display_order'] ?? 0,
+        ];
     }
 }

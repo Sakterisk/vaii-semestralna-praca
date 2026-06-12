@@ -11,19 +11,19 @@ export const AuthProvider = ({ children }) => {
 
   async function checkAuth() {
     try {
-      const response = await axios.get('/api/user'); 
-      setAuth({ isLoggedIn: true, role: (response.data.id === 1) ? 'admin' : 'user'});
+      const response = await axios.get('/api/user');
+      setAuth({ isLoggedIn: true, role: response.data.role || 'user' });
     } catch (error) {
+      setAuth({ isLoggedIn: false, role: null });
     }
   }
 
-  // Load persisted state on initialization
   useEffect(() => {
     checkAuth();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ auth, setAuth }}>
+    <AuthContext.Provider value={{ auth, setAuth, checkAuth }}>
       {children}
     </AuthContext.Provider>
   );

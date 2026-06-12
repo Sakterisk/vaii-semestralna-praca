@@ -2,74 +2,87 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Section;
+use App\Support\ContentSanitizer;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class SectionController extends Controller
 {
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        $sections = Section::all();
-        return response()->json($sections);
-    }
+        $query = Section::query()->orderBy('display_order')->orderBy('id');
 
-    public function store(Request $request)
-    {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
+        if (! $request->boolean('include_hidden')) {
+            $query->where('is_visible', true);
         }
-        $request->validate([
-            'header' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
+
+        return response()->json([
+            'data' => $query->get(),
         ]);
-        $section = new Section;
-        $section->header = $request->header;
-        $section->content = $request->content;
-        $section->save();
-        return response()->json('Section added successfully');
     }
 
-    public function show($id)
+    public function store(Request $request): JsonResponse
     {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $section = Section::find($id);
-        if (!$section) {
-            return response()->json('Section not found');
-        }
-        return response()->json($section);
-    }
-
-    public function update(Request $request, $id)
-    {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $section = Section::find($id);
-        if (!$section) {
-            return response()->json('Section not found');
-        }
-        $request->validate([
+        $validated = $request->validate([
+            'key' => ['nullable', 'string', 'max:100'],
             'header' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
+            'content' => ['required', 'string', 'max:4096'],
+            'display_order' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'is_visible' => ['nullable', 'boolean'],
         ]);
-        $section->header = $request->header;
-        $section->content = $request->content;
-        $section->save();
-        return response()->json('Section updated successfully');
+
+        $section = Section::create([
+            'key' => ContentSanitizer::text($validated['key'] ?? null),
+            'header' => ContentSanitizer::text($validated['header']),
+            'content' => ContentSanitizer::html($validated['content']),
+            'display_order' => $validated['display_order'] ?? 0,
+            'is_visible' => $validated['is_visible'] ?? true,
+        ]);
+
+        return response()->json([
+            'message' => 'Section created successfully.',
+            'data' => $section,
+        ], 201);
     }
 
-    public function destroy($id)
+    public function show(Section $section): JsonResponse
     {
-        if (!auth()->user() && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $section = Section::find($id);
-        if (!$section) {
-            return response()->json('Section not found');
-        }
+        return response()->json([
+            'data' => $section,
+        ]);
+    }
+
+    public function update(Request $request, Section $section): JsonResponse
+    {
+        $validated = $request->validate([
+            'key' => ['nullable', 'string', 'max:100'],
+            'header' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string', 'max:4096'],
+            'display_order' => ['nullable', 'integer', 'min:0', 'max:10000'],
+            'is_visible' => ['nullable', 'boolean'],
+        ]);
+
+        $section->update([
+            'key' => ContentSanitizer::text($validated['key'] ?? null),
+            'header' => ContentSanitizer::text($validated['header']),
+            'content' => ContentSanitizer::html($validated['content']),
+            'display_order' => $validated['display_order'] ?? 0,
+            'is_visible' => $validated['is_visible'] ?? true,
+        ]);
+
+        return response()->json([
+            'message' => 'Section updated successfully.',
+            'data' => $section->fresh(),
+        ]);
+    }
+
+    public function destroy(Section $section): JsonResponse
+    {
         $section->delete();
-        return response()->json('Section deleted successfully');
+
+        return response()->json([
+            'message' => 'Section deleted successfully.',
+        ]);
     }
 }

@@ -2,92 +2,63 @@ import React, { useState } from 'react';
 import { useAuth } from './Auth';
 import axios from 'axios';
 
-function Navbar({ setPageContent }) {
-
+function Navbar({ navigate, route }) {
   const [menuOpen, setMenuOpen] = useState(false);
   const { auth, setAuth } = useAuth();
 
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
+  const goTo = (path) => {
+    navigate(path);
+    setMenuOpen(false);
   };
 
-  const handleLogout = () => {
-    axios.post('/api/logout')
-      .then(() => {
-        setAuth({ isLoggedIn: false, role: null });
-      })
-      .catch(error => {
-        console.error(error);
-      });
-    setPageContent("aboutme");
+  const handleLogout = async () => {
+    try {
+      await axios.post('/api/logout');
+    } catch (error) {
+      console.error(error);
+    }
+
     setAuth({ isLoggedIn: false, role: null });
+    goTo('home');
   };
 
   return (
     <header>
-      <nav className="navbar">
-        <div className="nav-small">
-          <div className="navbar-toggler" onClick={toggleMenu}>
-            ☰
-          </div>
-          <div className="auth-icon">            
-            {auth.isLoggedIn ? (
-              <button className="nav-button" onClick={handleLogout}>
-                <i className="login-icon fa fa-sign-out"></i>
-              </button>
-            ) : (
-              <button className="nav-button" onClick={() => setPageContent("login")}>
-                <i className="login-icon fa fa-sign-in"></i>
-              </button>
-            )}
-          </div>
+      <nav className='navbar'>
+        <div className='brand' onClick={() => goTo('home')} role='button' tabIndex={0}>
+          Portfolio CMS
         </div>
 
         <div className={`nav-links ${menuOpen ? 'active' : ''}`}>
-          <div>
-            <button className="nav-button" onClick={() => setPageContent("aboutme")}>
-              About Me
-            </button>
-          </div>
-          <div>
-            <button className="nav-button" onClick={() => setPageContent("mywork")}>
-              My Work
-            </button>
-          </div>
-
-          {auth.isLoggedIn && auth.role === 'user' && (
-            <div>
-              <button className="nav-button" onClick={() => setPageContent("contact")}>
-                Contact
-              </button>
-            </div>
-          )}
-
+          <button className={`nav-button ${route === 'home' ? 'active' : ''}`} onClick={() => goTo('home')}>
+            Home
+          </button>
+          <button className={`nav-button ${route === 'projects' ? 'active' : ''}`} onClick={() => goTo('projects')}>
+            Projects
+          </button>
+          <button className={`nav-button ${route === 'contact' ? 'active' : ''}`} onClick={() => goTo('contact')}>
+            Contact
+          </button>
           {auth.isLoggedIn && auth.role === 'admin' && (
-            <div>
-              <button className="nav-button" onClick={() => setPageContent("adminpanel")}>
-                Admin Panel
-              </button>
-            </div>
+            <button className={`nav-button ${route === 'admin' ? 'active' : ''}`} onClick={() => goTo('admin')}>
+              CMS
+            </button>
           )}
-
         </div>
 
-          <div className="auth-text">
-            {auth.isLoggedIn ? (
-              <button className="nav-button" onClick={handleLogout}>
-                <span className='login-text'>Logout</span>
-              </button>
-            ) : (
-              <button className="nav-button" onClick={() => setPageContent("login")}>
-                <span className='login-text'>Login</span>
-              </button>
-            )}
-          </div>
-
+        <div className='nav-actions'>
+          <button className='menu-toggle' onClick={() => setMenuOpen((prev) => !prev)}>
+            ☰
+          </button>
+          {auth.isLoggedIn ? (
+            <button className='nav-button' onClick={handleLogout}>Logout</button>
+          ) : (
+            <button className='nav-button' onClick={() => goTo('login')}>Login</button>
+          )}
+        </div>
       </nav>
     </header>
   );
-};
+}
 
 export default Navbar;

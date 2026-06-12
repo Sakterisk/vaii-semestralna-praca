@@ -2,104 +2,99 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Message;
-use Illuminate\Support\Facades\Log;
+use App\Support\ContentSanitizer;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class MessageController extends Controller
 {
-    public function index()
+    public function index(Request $request): JsonResponse
     {
-        if (!auth()->user()) {
-            return response()->json('Unauthorized', 401);
+        $user = $request->user();
+
+        $query = Message::query()->with('user')->latest();
+
+        if (! $user->isAdmin()) {
+            $query->where('user_id', $user->id);
         }
 
-        if (auth()->user()->id !== 1) {
-            return response()->json(Message::all()->where('user_id', auth()->user()->id));
-        }
-
-        $messages = Message::with('user')->get();
-
-        $messagesWithEmail = $messages->map(function ($message) {
-            return [
-                'id' => $message->id,
-                'subject' => $message->subject,
-                'content' => $message->content,
-                'user_id' => $message->user_id,
-                'email' => $message->user->email ?? null,
-            ];
-        });
-
-        return response()->json($messagesWithEmail);
-    }
-
-    public function store(Request $request)
-    {
-        if (!auth()->user()) {
-            return response()->json('Unauthorized');
-        }
-        $request->validate([
-            'subject' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
+        return response()->json([
+            'data' => $query->get()->map(function (Message $message) {
+                return [
+                    'id' => $message->id,
+                    'subject' => $message->subject,
+                    'content' => $message->content,
+                    'user_id' => $message->user_id,
+                    'email' => $message->user?->email,
+                    'created_at' => $message->created_at,
+                ];
+            }),
         ]);
-        $message = new Message;
-        $message->subject = $request->subject;
-        $message->content = $request->content;
-        $message->user_id = auth()->user()->id;
-        $message->save();
-        return response()->json('Section added successfully');
     }
 
-    public function show($id)
+    public function store(Request $request): JsonResponse
     {
-        if (!auth()->user()) {
-            return response()->json('Unauthorized');
-        }
-        $message = Message::find($id);
-        if (!$message) {
-            return response()->json('Message not found');
-        }
-        if ($message->user_id !== auth()->user()->id && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        return response()->json($message);
-    }
-
-    public function update(Request $request, $id)
-    {
-        if (!auth()->user()) {
-            return response()->json('Unauthorized');
-        }
-        $message = Message::find($id);
-        if (!$message) {
-            return response()->json('Message not found');
-        }
-        if ($message->user_id !== auth()->user()->id && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
-        $request->validate([
+        $validated = $request->validate([
             'subject' => ['required', 'string', 'max:255'],
-            'content' => ['required', 'string', 'max:1024'],
+            'content' => ['required', 'string', 'max:4096'],
         ]);
-        $message->subject = $request->subject;
-        $message->content = $request->content;
-        $message->save();
-        return response()->json('Message updated successfully');
+
+        $message = Message::create([
+            'subject' => ContentSanitizer::text($validated['subject']),
+            'content' => ContentSanitizer::text($validated['content']),
+            'user_id' => $request->user()->id,
+        ]);
+
+        return response()->json([
+            'message' => 'Message sent successfully.',
+            'data' => $message,
+        ], 201);
     }
 
-    public function destroy($id)
+    public function show(Request $request, Message $message): JsonResponse
     {
-        if (!auth()->user()) {
-            return response()->json('Unauthorized');
-        }
-        $message = Message::find($id);
-        if (!$message) {
-            return response()->json('Message not found');
-        }
-        if ($message->user_id !== auth()->user()->id && !auth()->user()->id === 1) {
-            return response()->json('Unauthorized');
-        }
+        $this->authorizeMessage($request, $message);
+
+        return response()->json([
+            'data' => $message->load('user'),
+        ]);
+    }
+
+    public function update(Request $request, Message $message): JsonResponse
+    {
+        $this->authorizeMessage($request, $message);
+
+        $validated = $request->validate([
+            'subject' => ['required', 'string', 'max:255'],
+            'content' => ['required', 'string', 'max:4096'],
+        ]);
+
+        $message->update([
+            'subject' => ContentSanitizer::text($validated['subject']),
+            'content' => ContentSanitizer::text($validated['content']),
+        ]);
+
+        return response()->json([
+            'message' => 'Message updated successfully.',
+            'data' => $message->fresh(),
+        ]);
+    }
+
+    public function destroy(Request $request, Message $message): JsonResponse
+    {
+        $this->authorizeMessage($request, $message);
         $message->delete();
-        return response()->json('Message deleted successfully');
+
+        return response()->json([
+            'message' => 'Message deleted successfully.',
+        ]);
+    }
+
+    private function authorizeMessage(Request $request, Message $message): void
+    {
+        $user = $request->user();
+
+        abort_unless($user->isAdmin() || $message->user_id === $user->id, 403, 'Forbidden');
     }
 }

@@ -1,12 +1,11 @@
 import React from 'react';
 
-function Footer()
-{
+function Footer() {
   return (
     <footer>
-      <p>Adam Adamec ©2024</p>
+      <p>Built with React + Laravel CMS</p>
     </footer>
   );
-};
+}
 
 export default Footer;
